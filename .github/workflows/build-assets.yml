@@ -1,0 +1,38 @@
+name: build assets
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "20 1 * * *" # 每天 UTC 01:20（北京时间 09:20），刷新贡献图
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 生成横幅与贡献图
+        run: |
+          python assets/gen_banner.py
+          python assets/gen_contrib.py
+
+      - name: 有变化才提交
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/banner.svg assets/contrib.svg
+          if git diff --cached --quiet; then
+            echo "没有变化，跳过"
+          else
+            git commit -m "chore: 重新生成横幅与贡献图"
+            git push
+          fi
